@@ -1,0 +1,65 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+
+# Logs, local runtime data, and coverage
+*.log
+*.pid
+coverage/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Local databases and generated data
+*.db
+*.sqlite
+*.sqlite3
+data/
+qdrant_storage/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Backend local configuration and build output
+healthy/src/main/resources/application.yaml
+healthy/target/
+
+# Agent local configuration and build output
+healthy_agent/.env

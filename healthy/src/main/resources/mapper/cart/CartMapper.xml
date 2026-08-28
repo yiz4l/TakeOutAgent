@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yizl.healthy.cart.mapper.CartMapper">
+    <resultMap id="cartItemMap" type="com.yizl.healthy.cart.mapper.row.CartItemRow">
+        <id property="id" column="id"/>
+        <result property="merchantId" column="merchant_id"/>
+        <result property="merchantName" column="merchant_name"/>
+        <result property="productType" column="product_type"/>
+        <result property="productId" column="product_id"/>
+        <result property="name" column="product_name"/>
+        <result property="imagePath" column="image_path"/>
+        <result property="unitPrice" column="unit_price"/>
+        <result property="quantity" column="quantity"/>
+        <result property="selected" column="selected"/>
+    </resultMap>
+
+    <insert id="addOrIncrement" parameterType="com.yizl.healthy.cart.entity.CartEntity"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shopping_cart(user_id, merchant_id, product_type, product_id, quantity, selected)
+        VALUES (#{userId}, #{merchantId}, #{productType}, #{productId}, #{quantity}, #{selected})
+        ON DUPLICATE KEY UPDATE
+            id = LAST_INSERT_ID(id),
+            quantity = quantity + VALUES(quantity),
+            selected = VALUES(selected)
+    </insert>
+
+    <sql id="cartProductColumns">
+        SELECT sc.id, sc.merchant_id, m.name AS merchant_name, sc.product_type, sc.product_id,
+               CASE sc.product_type WHEN 'DISH' THEN d.name ELSE s.name END AS product_name,
+               CASE sc.product_type WHEN 'DISH' THEN d.image_path ELSE s.image_path END AS image_path,
+               CASE sc.product_type WHEN 'DISH' THEN d.price ELSE s.price END AS unit_price,
+               sc.quantity, sc.selected
+        FROM shopping_cart sc
+        JOIN merchant m ON m.id = sc.merchant_id
+        LEFT JOIN dish d ON sc.product_type = 'DISH' AND d.id = sc.product_id
+        LEFT JOIN setmeal s ON sc.product_type = 'SETMEAL' AND s.id = sc.product_id
+    </sql>
+
+    <select id="selectCartItems" resultMap="cartItemMap">
+        <include refid="cartProductColumns"/>
+        WHERE sc.user_id = #{userId}
+        <if test="merchantId != null">AND sc.merchant_id = #{merchantId}</if>
+        ORDER BY sc.merchant_id, sc.id DESC
+    </select>
+
+    <select id="selectCartItem" resultMap="cartItemMap">
+        <include refid="cartProductColumns"/>
+        WHERE sc.user_id = #{userId} AND sc.id = #{cartItemId}
+    </select>
+
+    <update id="updateOwnedItem">
+        UPDATE shopping_cart
+        <set>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="selected != null">selected = #{selected},</if>
+        </set>
+        WHERE id = #{cartItemId} AND user_id = #{userId}
+    </update>
+
+    <delete id="deleteOwnedItem">
+        DELETE FROM shopping_cart WHERE id = #{cartItemId} AND user_id = #{userId}
+    </delete>
+
+    <select id="lockOwnedItems" resultType="com.yizl.healthy.cart.entity.CartEntity">
+        SELECT * FROM shopping_cart
+        WHERE user_id = #{userId} AND id IN
+        <foreach collection="cartItemIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+        ORDER BY id
+        FOR UPDATE
+    </select>
+
+    <select id="selectAvailableProduct" resultType="com.yizl.healthy.cart.mapper.row.ProductSnapshotRow">
+        <choose>
+            <when test="productType == 'DISH'">
+                SELECT d.id AS product_id, 'DISH' AS product_type, d.merchant_id,
+                       d.name, d.image_path, d.price
+                FROM dish d JOIN merchant m ON m.id = d.merchant_id
+                WHERE d.id = #{productId} AND d.merchant_id = #{merchantId}
+                  AND d.status = 'ON_SALE' AND m.business_status = 1
+            </when>
+            <when test="productType == 'SETMEAL'">
+                SELECT s.id AS product_id, 'SETMEAL' AS product_type, s.merchant_id,
+                       s.name, s.image_path, s.price
+                FROM setmeal s JOIN merchant m ON m.id = s.merchant_id
+                WHERE s.id = #{productId} AND s.merchant_id = #{merchantId}
+                  AND s.status = 'ON_SALE' AND m.business_status = 1
+            </when>
+            <otherwise>
+                SELECT NULL AS product_id, NULL AS product_type, NULL AS merchant_id,
+                       NULL AS name, NULL AS image_path, NULL AS price
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        FOR SHARE
+    </select>
+
+    <delete id="deleteCheckoutItemsAtOrBelowQuantity">
+        DELETE sc FROM shopping_cart sc
+        JOIN order_detail od ON od.order_id = #{orderId}
+          AND od.product_type = sc.product_type AND od.product_id = sc.product_id
+        JOIN orders o ON o.id = od.order_id AND o.merchant_id = sc.merchant_id
+        WHERE sc.user_id = #{userId} AND sc.quantity &lt;= od.quantity
+    </delete>
+
+    <update id="decrementCheckoutItemsAboveQuantity">
+        UPDATE shopping_cart sc
+        JOIN order_detail od ON od.order_id = #{orderId}
+          AND od.product_type = sc.product_type AND od.product_id = sc.product_id
+        JOIN orders o ON o.id = od.order_id AND o.merchant_id = sc.merchant_id
+        SET sc.quantity = sc.quantity - od.quantity
+        WHERE sc.user_id = #{userId} AND sc.quantity &gt; od.quantity
+    </update>
+</mapper>

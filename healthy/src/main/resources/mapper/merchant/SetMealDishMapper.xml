@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yizl.healthy.merchant.mapper.SetMealDishMapper">
+
+    <resultMap id="setMealDishRowMap"
+               type="com.yizl.healthy.merchant.mapper.row.SetMealDishRow">
+        <id property="dishId" column="dish_id"/>
+        <result property="name" column="name"/>
+        <result property="imagePath" column="image_path"/>
+        <result property="copies" column="copies"/>
+    </resultMap>
+
+    <select id="selectDetailsBySetMealId" resultMap="setMealDishRowMap">
+        SELECT d.id AS dish_id,
+               d.name,
+               d.image_path,
+               sd.copies
+        FROM setmeal_dish sd
+        JOIN dish d ON d.id = sd.dish_id
+        WHERE sd.setmeal_id = #{setMealId}
+        ORDER BY sd.id ASC
+    </select>
+</mapper>

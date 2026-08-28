@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yizl.healthy.merchant.mapper.ProductQueryMapper">
+
+    <resultMap id="productSummaryRowMap"
+               type="com.yizl.healthy.merchant.mapper.row.ProductSummaryRow">
+        <id property="id" column="id"/>
+        <result property="productType" column="product_type"/>
+        <result property="merchantId" column="merchant_id"/>
+        <result property="merchantName" column="merchant_name"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="name" column="name"/>
+        <result property="price" column="price"/>
+        <result property="imagePath" column="image_path"/>
+        <result property="description" column="description"/>
+        <result property="salesCount" column="sales_count"/>
+        <result property="nutritionTagsJson" column="nutrition_tags_json"/>
+    </resultMap>
+
+    <sql id="filteredProductUnion">
+        <trim suffixOverrides="UNION ALL">
+            <if test="productType == null or productType == 'DISH'">
+                SELECT d.id,
+                       'DISH' AS product_type,
+                       m.id AS merchant_id,
+                       m.name AS merchant_name,
+                       dc.id AS category_id,
+                       dc.name AS category_name,
+                       d.name,
+                       d.price,
+                       d.image_path,
+                       d.description,
+                       d.sales_count,
+                       (
+                           SELECT JSON_ARRAYAGG(cn.nutrition_tag)
+                           FROM category_nutrition cn
+                           WHERE cn.category_id = d.category_id
+                       ) AS nutrition_tags_json
+                FROM dish d
+                JOIN merchant m ON m.id = d.merchant_id
+                JOIN dish_category dc ON dc.id = d.category_id
+                WHERE d.status = 'ON_SALE'
+                  AND m.business_status = 1
+                <if test="merchantId != null">
+                    AND d.merchant_id = #{merchantId}
+                </if>
+                <if test="categoryId != null">
+                    AND d.category_id = #{categoryId}
+                </if>
+                <if test="keyword != null and keyword != ''">
+                    AND (
+                        d.name LIKE CONCAT('%', #{keyword}, '%')
+                        OR d.description LIKE CONCAT('%', #{keyword}, '%')
+                        OR dc.name LIKE CONCAT('%', #{keyword}, '%')
+                        OR EXISTS (
+                            SELECT 1
+                            FROM category_nutrition cn
+                            WHERE cn.category_id = d.category_id
+                              AND cn.nutrition_tag LIKE CONCAT('%', #{keyword}, '%')
+                        )
+                    )
+                </if>
+                UNION ALL
+            </if>
+            <if test="productType == null or productType == 'SETMEAL'">
+                SELECT s.id,
+                       'SETMEAL' AS product_type,
+                       m.id AS merchant_id,
+                       m.name AS merchant_name,
+                       NULL AS category_id,
+                       NULL AS category_name,
+                       s.name,
+                       s.price,
+                       s.image_path,
+                       s.description,
+                       s.sales_count,
+                       NULL AS nutrition_tags_json
+                FROM setmeal s
+                JOIN merchant m ON m.id = s.merchant_id
+                WHERE s.status = 'ON_SALE'
+                  AND m.business_status = 1
+                <if test="merchantId != null">
+                    AND s.merchant_id = #{merchantId}
+                </if>
+                <if test="categoryId != null">
+                    AND 1 = 0
+                </if>
+                <if test="keyword != null and keyword != ''">
+                    AND (
+                        s.name LIKE CONCAT('%', #{keyword}, '%')
+                        OR s.description LIKE CONCAT('%', #{keyword}, '%')
+                    )
+                </if>
+                UNION ALL
+            </if>
+        </trim>
+    </sql>
+
+    <select id="countByCondition"
+            parameterType="com.yizl.healthy.merchant.mapper.param.ProductQueryCondition"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="filteredProductUnion"/>
+        ) products
+    </select>
+
+    <select id="selectPageByCondition"
+            parameterType="com.yizl.healthy.merchant.mapper.param.ProductQueryCondition"
+            resultMap="productSummaryRowMap">
+        SELECT *
+        FROM (
+            <include refid="filteredProductUnion"/>
+        ) products
+        ORDER BY sales_count DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectAllByMerchantId" resultMap="productSummaryRowMap">
+        SELECT *
+        FROM (
+            SELECT d.id,
+                   'DISH' AS product_type,
+                   m.id AS merchant_id,
+                   m.name AS merchant_name,
+                   dc.id AS category_id,
+                   dc.name AS category_name,
+                   d.name,
+                   d.price,
+                   d.image_path,
+                   d.description,
+                   d.sales_count,
+                   (
+                       SELECT JSON_ARRAYAGG(cn.nutrition_tag)
+                       FROM category_nutrition cn
+                       WHERE cn.category_id = d.category_id
+                   ) AS nutrition_tags_json
+            FROM dish d
+            JOIN merchant m ON m.id = d.merchant_id
+            JOIN dish_category dc ON dc.id = d.category_id
+            WHERE d.merchant_id = #{merchantId}
+              AND d.status = 'ON_SALE'
+              AND m.business_status = 1
+            UNION ALL
+            SELECT s.id,
+                   'SETMEAL' AS product_type,
+                   m.id AS merchant_id,
+                   m.name AS merchant_name,
+                   NULL AS category_id,
+                   NULL AS category_name,
+                   s.name,
+                   s.price,
+                   s.image_path,
+                   s.description,
+                   s.sales_count,
+                   NULL AS nutrition_tags_json
+            FROM setmeal s
+            JOIN merchant m ON m.id = s.merchant_id
+            WHERE s.merchant_id = #{merchantId}
+              AND s.status = 'ON_SALE'
+              AND m.business_status = 1
+        ) products
+        ORDER BY sales_count DESC, id DESC
+    </select>
+</mapper>
