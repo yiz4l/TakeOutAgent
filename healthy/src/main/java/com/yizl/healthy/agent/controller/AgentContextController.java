@@ -40,7 +40,10 @@ public class AgentContextController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "invalid agent service credential");
         }
         Map<String, Object> task = mapper.selectTask(taskId);
-        if (task == null || !workerId.equals(task.get("lease_owner"))) {
+        if (task == null || !"RUNNING".equals(task.get("status"))
+                || !workerId.equals(task.get("lease_owner"))
+                || task.get("lease_until") == null
+                || !((java.sql.Timestamp) task.get("lease_until")).toLocalDateTime().isAfter(java.time.LocalDateTime.now())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "task lease does not belong to worker");
         }
         Long userId = ((Number) task.get("user_id")).longValue();
@@ -51,6 +54,7 @@ public class AgentContextController {
         result.put("analysisDate", analysisDate.toString());
         result.put("inputRevision", String.valueOf(task.get("input_revision")));
         result.put("profileRevision", String.valueOf(task.getOrDefault("profile_revision", 0)));
+        result.put("sourceRevision", String.valueOf(task.getOrDefault("source_revision", "")));
         result.put("modelVersion", task.get("model_version"));
         result.put("healthProfile", normalizeProfile(mapper.selectProfile(userId)));
         result.put("dietRecords", normalizeDietRecords(mapper.selectDietRecords(userId, analysisDate)));

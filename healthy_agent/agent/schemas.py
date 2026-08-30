@@ -34,6 +34,7 @@ class DailyNutrition(BaseModel):
     protein_g: float = Field(default=0, alias="proteinG")
     fat_g: float = Field(default=0, alias="fatG")
     carbohydrate_g: float = Field(default=0, alias="carbohydrateG")
+    revision: int = 0
 
 class PeriodSummary(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -44,15 +45,22 @@ class PeriodSummary(BaseModel):
     summary: str
     nutrient_trends: dict[str, str] = Field(default_factory=dict, alias="nutrientTrends")
 class HealthAnalysisContext(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, protected_namespaces=())
     task_id: str = Field(alias="taskId"); user_id: str = Field(alias="userId"); analysis_date: date = Field(alias="analysisDate"); input_revision: str = Field(alias="inputRevision"); model_version: str = Field(alias="modelVersion")
     nutrition_summary: list[NutritionTagCount] = Field(default_factory=list, alias="nutritionSummary"); diet_records: list[DietRecord] = Field(default_factory=list, alias="dietRecords"); available_recommendation_categories: list[RecommendationCategory] = Field(default_factory=list, alias="availableRecommendationCategories")
     health_profile: HealthProfile | None = Field(default=None, alias="healthProfile")
     recent_daily_nutrition: list[DailyNutrition] = Field(default_factory=list, alias="recentDailyNutrition")
     prior_period_summaries: list[PeriodSummary] = Field(default_factory=list, alias="priorPeriodSummaries")
+    profile_revision: str = Field(default="0", alias="profileRevision")
+    source_revision: str = Field(default="", alias="sourceRevision")
 class TaskLease(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, protected_namespaces=())
     task_id: str = Field(alias="taskId"); request_id: str = Field(alias="requestId"); user_id: str = Field(alias="userId"); analysis_date: date = Field(alias="analysisDate"); input_revision: str = Field(alias="inputRevision"); model_version: str = Field(alias="modelVersion"); attempt_count: int = Field(alias="attemptCount")
+    task_type: str = Field(default="DAILY_ANALYSIS", alias="taskType")
+    period_start: date | None = Field(default=None, alias="periodStart")
+    period_end: date | None = Field(default=None, alias="periodEnd")
+    profile_revision: str = Field(default="0", alias="profileRevision")
+    source_revision: str = Field(default="", alias="sourceRevision")
 class Recommendation(BaseModel):
     category_id: str = Field(alias="categoryId"); recommendation_score: float = Field(alias="recommendationScore", ge=0, le=100); reason: str = Field(min_length=1, max_length=500)
 class AnalysisResult(BaseModel):

@@ -53,7 +53,7 @@ class Settings:
             long_memory_collection=os.getenv(
                 "QDRANT_COLLECTION_LONG_MEMORY", "agent_long_memory"
             ),
-            embedding_dim=int(os.getenv("EMBEDDING_DIM", "1024")),
+            embedding_dim=int(os.getenv("EMBEDDING_DIM", "1536")),
             enable_qdrant=env_bool("ENABLE_QDRANT"),
             enable_llm=env_bool("ENABLE_LLM"),
             openai_chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),

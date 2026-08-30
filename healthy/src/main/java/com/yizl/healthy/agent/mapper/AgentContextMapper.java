@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Mapper
 public interface AgentContextMapper {
-    @Select("SELECT id, user_id, analysis_date, input_revision, profile_revision, model_version, lease_owner, lease_until FROM health_analysis_task WHERE id = #{taskId}")
+    @Select("SELECT id, user_id, analysis_date, input_revision, profile_revision, source_revision, model_version, status, task_type, lease_owner, lease_until FROM health_analysis_task WHERE id = #{taskId}")
     Map<String, Object> selectTask(@Param("taskId") Long taskId);
 
     @Select("SELECT * FROM user_health_profile WHERE user_id = #{userId}")

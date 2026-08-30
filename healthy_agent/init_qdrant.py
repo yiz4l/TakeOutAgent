@@ -51,7 +51,7 @@ def create_payload_indexes(qdrant: QdrantClient, name: str) -> None:
 
 def main() -> None:
     qdrant = client()
-    dimension = int(os.getenv("EMBEDDING_DIM", "1024"))
+    dimension = int(os.getenv("EMBEDDING_DIM", "1536"))
     short_memory = os.getenv("QDRANT_COLLECTION_SHORT_MEMORY", "agent_short_memory")
     long_memory = os.getenv("QDRANT_COLLECTION_LONG_MEMORY", "agent_long_memory")
     knowledge = os.getenv("QDRANT_COLLECTION_KNOWLEDGE", "nutrition_knowledge")

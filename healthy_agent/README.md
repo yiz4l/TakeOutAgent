@@ -79,6 +79,10 @@ Java 的 `doc/updateDatebase.sql` 追加了三类数据：`user_health_profile` 
 
 周期总结由 `POST /internal/agent/period-summaries/complete` 写回 MySQL；Python 的 `PeriodSummaryChain` 用 LangChain 生成结构化总结，随后应使用同一摘要 embedding upsert 到 `agent_long_memory`。MySQL 是可审计的结构化来源，Qdrant 是语义召回副本。
 
+当前 Worker 已按 `taskType` 分流：`DAILY_ANALYSIS` 调用 `/health-analysis-tasks/{taskId}/complete`，`BIWEEKLY_SUMMARY` 和 `MONTHLY_SUMMARY` 调用 `/period-summaries/complete`。两个完成接口都会锁定任务，校验幂等键、Worker 租约、模型版本、画像版本和来源 SHA-256 指纹，再在一个 MySQL 事务中写结果并更新任务状态。只有 Java 返回 `SUCCEEDED` 后，Python 才写 Qdrant；返回 `STALE` 时不会污染向量记忆。
+
+规则层现在使用用户体重和 `MUSCLE_GAIN/FAT_LOSS/MAINTAIN` 目标计算项目级蛋白质目标，统计最近 14 天不足天数，并用 `allergies`、`dislikedFoods` 过滤候选分类。这里的系数属于当前规则版本的产品策略，不应表述为医疗诊断标准；上线前应由营养规范确认并版本化。
+
 ## LangChain 与 LangGraph 取舍
 
 当前实现使用 LangChain 的 `ChatPromptTemplate`、`ChatOpenAI`、`with_structured_output` 和 Runnable 管道，已经覆盖模型调用、提示词管理和结构化输出。暂不引入 LangGraph，是因为当前流程是固定线性的；当后续加入并行检索、人工审核、模型重试分支、断点恢复或多 Agent 协作时，再把这些方法拆成 LangGraph 节点，可以避免为了使用框架而增加不必要的状态复杂度。
