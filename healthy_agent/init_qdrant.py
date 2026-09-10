@@ -3,6 +3,7 @@
 Run after starting Qdrant: ``python init_qdrant.py``.
 The script is idempotent and never deletes existing collections.
 """
+
 from __future__ import annotations
 
 import os
@@ -46,7 +47,9 @@ def create_payload_indexes(qdrant: QdrantClient, name: str) -> None:
         "confidence": models.PayloadSchemaType.FLOAT,
     }
     for field, schema in fields.items():
-        qdrant.create_payload_index(collection_name=name, field_name=field, field_schema=schema)
+        qdrant.create_payload_index(
+            collection_name=name, field_name=field, field_schema=schema
+        )
 
 
 def main() -> None:
@@ -58,7 +61,9 @@ def main() -> None:
     for name in (short_memory, long_memory, knowledge):
         ensure_collection(qdrant, name, dimension)
         create_payload_indexes(qdrant, name)
-    print(f"Qdrant ready: {short_memory}, {long_memory}, {knowledge} (dimension={dimension}, cosine)")
+    print(
+        f"Qdrant ready: {short_memory}, {long_memory}, {knowledge} (dimension={dimension}, cosine)"
+    )
 
 
 if __name__ == "__main__":

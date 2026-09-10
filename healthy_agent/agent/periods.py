@@ -12,7 +12,9 @@ def period_boundaries(end: date, weeks: int = 2) -> tuple[date, date]:
 def build_period_prompt(context: HealthAnalysisContext, period_type: str) -> str:
     """Create compact, deterministic input for a biweekly/monthly summary task."""
     if period_type == "MONTHLY":
-        source = [item.model_dump(by_alias=True) for item in context.prior_period_summaries]
+        source = [
+            item.model_dump(by_alias=True) for item in context.prior_period_summaries
+        ]
         return f"用户画像={context.health_profile.model_dump(by_alias=True) if context.health_profile else {}}\n两周总结={source}"
     days = [item.model_dump(by_alias=True) for item in context.recent_daily_nutrition]
     return f"用户画像={context.health_profile.model_dump(by_alias=True) if context.health_profile else {}}\n最近每日营养={days}"
@@ -30,16 +32,29 @@ def trend(days: list[DailyNutrition]) -> dict[str, str]:
 
 
 def fallback_summary(context: HealthAnalysisContext, period_type: str) -> PeriodSummary:
-    start, end = period_boundaries(context.analysis_date, 4 if period_type == "MONTHLY" else 2)
+    start, end = period_boundaries(
+        context.analysis_date, 4 if period_type == "MONTHLY" else 2
+    )
     if period_type == "MONTHLY" and context.prior_period_summaries:
         sources = context.prior_period_summaries[:2]
         nutrients = set().union(*(item.nutrient_trends for item in sources))
         trends = {}
         for nutrient in nutrients:
             values = [item.nutrient_trends.get(nutrient) for item in sources]
-            trends[nutrient] = "HIGH" if "HIGH" in values else "LOW" if "LOW" in values else "NORMAL"
+            trends[nutrient] = (
+                "HIGH" if "HIGH" in values else "LOW" if "LOW" in values else "NORMAL"
+            )
     else:
         trends = trend(context.recent_daily_nutrition)
     labels = {"LOW": "偏低", "HIGH": "偏高", "NORMAL": "正常"}
-    text = "、".join(f"{key}{labels.get(value, value)}" for key, value in trends.items()) or "暂无足够营养数据"
-    return PeriodSummary(periodType=period_type, periodStart=start, periodEnd=end, summary=f"本周期营养趋势：{text}。", nutrientTrends=trends)
+    text = (
+        "、".join(f"{key}{labels.get(value, value)}" for key, value in trends.items())
+        or "暂无足够营养数据"
+    )
+    return PeriodSummary(
+        periodType=period_type,
+        periodStart=start,
+        periodEnd=end,
+        summary=f"本周期营养趋势：{text}。",
+        nutrientTrends=trends,
+    )

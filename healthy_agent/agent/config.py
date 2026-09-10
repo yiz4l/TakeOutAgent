@@ -13,12 +13,15 @@ def env_bool(name: str, default: bool = False) -> bool:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
+
 @dataclass(frozen=True)
 class Settings:
     java_base_url: str
     agent_service_token: str
     worker_id: str
     lease_seconds: int = 120
+    max_task_seconds: int = 300
+    concurrency: int = 4
     poll_seconds: float = 3.0
     request_timeout: float = 20.0
     qdrant_url: str = "http://localhost:6333"
@@ -39,10 +42,16 @@ class Settings:
             f"diet-agent-{socket.gethostname()}-{uuid.uuid4().hex[:8]}"
         )
         return cls(
-            java_base_url=os.getenv("JAVA_AGENT_BASE_URL", "http://localhost:8080").rstrip("/"),
+            java_base_url=os.getenv(
+                "JAVA_AGENT_BASE_URL", "http://localhost:8080"
+            ).rstrip("/"),
             agent_service_token=os.getenv("AGENT_SERVICE_TOKEN", ""),
             worker_id=worker_id,
-            lease_seconds=max(30, min(600, int(os.getenv("AGENT_LEASE_SECONDS", "120")))),
+            lease_seconds=max(
+                30, min(600, int(os.getenv("AGENT_LEASE_SECONDS", "120")))
+            ),
+            max_task_seconds=300,
+            concurrency=max(1, min(32, int(os.getenv("AGENT_CONCURRENCY", "4")))),
             poll_seconds=float(os.getenv("AGENT_POLL_SECONDS", "3")),
             request_timeout=float(os.getenv("AGENT_REQUEST_TIMEOUT", "20")),
             qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),

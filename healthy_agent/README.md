@@ -10,7 +10,6 @@
 
 ```bash
 cd healthy_agent
-cp .env .env
 docker compose up -d qdrant
 python -m pip install -r requirements.txt
 python init_qdrant.py
